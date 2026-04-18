@@ -262,7 +262,13 @@ class RoundTripPipeline:
     initial_temperature, initial_top_p : float
         Starting decoding parameters.
     temperature_delta, top_p_delta : float
-        Step sizes for the adaptive controller.
+        Fixed step sizes for the adaptive controller.
+    tau_low : float
+        Lower fidelity threshold; scores below this trigger parameter reduction.
+    tau_high : float
+        Upper fidelity threshold; scores at or above this trigger parameter increase.
+    tau_select : float
+        Selection threshold; only (S, T̂) pairs with fidelity ≥ τ_select are retained.
     alpha : float
         Balance weight between semantic and lexical similarity
         (default 0.7 as per paper).
@@ -279,8 +285,11 @@ class RoundTripPipeline:
         cycles: int = 100,
         initial_temperature: float = 0.8,
         initial_top_p: float = 0.8,
-        temperature_delta: float = 0.9,
-        top_p_delta: float = 0.5,
+        temperature_delta: float = 0.05,
+        top_p_delta: float = 0.05,
+        tau_low: float = 0.5,
+        tau_high: float = 0.9,
+        tau_select: float = 0.85,
         alpha: float = 0.7,
         custom_chat_template: str | None = None,
     ):
@@ -292,6 +301,9 @@ class RoundTripPipeline:
         self.top_p = initial_top_p
         self.temperature_delta = temperature_delta
         self.top_p_delta = top_p_delta
+        self.tau_low = tau_low
+        self.tau_high = tau_high
+        self.tau_select = tau_select
         self.alpha = alpha
         self.custom_chat_template = custom_chat_template
 
@@ -301,10 +313,15 @@ class RoundTripPipeline:
         return self.alpha * emb_score + (1 - self.alpha) * rouge_l
 
     # ---- main loop --------------------------------------------------------
-    def run(self) -> pd.DataFrame:
-        """Execute the iterative round-trip pipeline.
+    def run(self) -> tuple[pd.DataFrame, list[tuple[str, str]]]:
+        """Execute the iterative round-trip pipeline (Algorithm 1).
 
-        Returns a DataFrame with per-cycle metrics.
+        Returns
+        -------
+        metrics_df : pd.DataFrame
+            Per-cycle metrics for analysis.
+        selected : list[tuple[str, str]]
+            List of ``(S, T̂)`` pairs that passed the τ_select threshold.
         """
         text_llm = LLMGenerator(self.text_model_name, self.custom_chat_template)
         triple_llm = LLMGenerator(self.triple_model_name, self.custom_chat_template)
@@ -312,7 +329,7 @@ class RoundTripPipeline:
 
         current_text = self.initial_triples
         generated_texts: list[str] = []
-        last_sim_triple: float | None = None
+        selected: list[tuple[str, str]] = []
         records: list[dict] = []
 
         for i in range(self.cycles):
@@ -322,7 +339,7 @@ class RoundTripPipeline:
                 "top_p": self.top_p,
             }
 
-            # --- select prompt & task ---
+            # --- Step 1: Structure-to-Text Generation ---
             if i == 0:
                 messages = PromptTemplates.kg_to_text_first(self.initial_triples)
                 task = "text"
@@ -344,7 +361,7 @@ class RoundTripPipeline:
             record["task"] = task
             record["extracted_output"] = extracted
 
-            # --- evaluate ---
+            # --- Step 2/3: Evaluate fidelity ---
             if task == "text":
                 generated_texts.append(extracted)
                 # Compare with all previous text generations
@@ -360,29 +377,36 @@ class RoundTripPipeline:
                 rouge = LexicalSimilarity.compute(prep_orig, prep_gen)
                 emb = emb_sim.compute(prep_orig, prep_gen)
                 llm_sim = triple_llm.evaluate_similarity(prep_orig, prep_gen)
-                combined = self._round_trip_similarity(emb, rouge["rougeL"].fmeasure)
+                fidelity = self._round_trip_similarity(emb, rouge["rougeL"].fmeasure)
 
                 record["triple_emb_sim"] = emb
                 record["triple_rougeL"] = rouge["rougeL"].fmeasure
                 record["triple_llm_sim"] = llm_sim
-                record["round_trip_sim"] = combined
+                record["round_trip_sim"] = fidelity
 
-                # --- adaptive parameter adjustment ---
-                if last_sim_triple is not None:
-                    diff = combined - last_sim_triple
-                    self.temperature = max(
-                        0.01, min(1.0, self.temperature + self.temperature_delta * diff)
-                    )
-                    self.top_p = max(
-                        0.01, min(1.0, self.top_p + self.top_p_delta * diff)
-                    )
-                last_sim_triple = combined
+                # --- Step 4: Adaptive Parameter Adjustment (Algorithm 1) ---
+                if fidelity < self.tau_low:
+                    # Low fidelity → decrease randomness to recover accuracy
+                    self.temperature = max(0.0, self.temperature - self.temperature_delta)
+                    self.top_p = max(0.0, self.top_p - self.top_p_delta)
+                elif fidelity >= self.tau_high:
+                    # High fidelity → increase randomness to promote diversity
+                    self.temperature = min(1.0, self.temperature + self.temperature_delta)
+                    self.top_p = min(1.0, self.top_p + self.top_p_delta)
+                # else: τ_low ≤ fidelity < τ_high → keep parameters unchanged
+
+                # --- Selection: retain high-fidelity pairs ---
+                if fidelity >= self.tau_select:
+                    selected.append((self.initial_triples, generated_texts[-1]))
+                    record["selected"] = True
+                else:
+                    record["selected"] = False
 
             records.append(record)
             current_text = extracted
             time.sleep(0.5)
 
-        return pd.DataFrame(records)
+        return pd.DataFrame(records), selected
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +437,9 @@ if __name__ == "__main__":
         help="HuggingFace model for Text → KG.",
     )
     parser.add_argument("--cycles", type=int, default=100, help="Number of iterations.")
+    parser.add_argument("--tau_low", type=float, default=0.5, help="Low fidelity threshold.")
+    parser.add_argument("--tau_high", type=float, default=0.9, help="High fidelity threshold.")
+    parser.add_argument("--tau_select", type=float, default=0.85, help="Selection threshold.")
     parser.add_argument("--output_dir", type=str, default=".", help="Output directory.")
     args = parser.parse_args()
 
@@ -428,8 +455,19 @@ if __name__ == "__main__":
             triple_model=args.triple_model,
             initial_triples=prompt,
             cycles=args.cycles,
+            tau_low=args.tau_low,
+            tau_high=args.tau_high,
+            tau_select=args.tau_select,
         )
-        results = pipeline.run()
+        results, selected = pipeline.run()
         out_path = f"{args.output_dir}/output_{idx}.csv"
         results.to_csv(out_path, index=False)
-        print(f"  → Saved to {out_path}")
+        print(f"  → Metrics saved to {out_path}")
+        print(f"  → {len(selected)} high-fidelity pairs selected (τ_select={args.tau_select})")
+
+        if selected:
+            sel_path = f"{args.output_dir}/selected_{idx}.csv"
+            sel_df = pd.DataFrame(selected, columns=["triples", "text"])
+            sel_df.to_csv(sel_path, index=False)
+            print(f"  → Selected pairs saved to {sel_path}")
+
