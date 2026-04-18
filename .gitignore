@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model weights & checkpoints
+*.bin
+*.safetensors
+*.pt
+*.pth
+checkpoints/
+outputs/
+
+# Data files (large)
+*.csv
+!data/*.csv
+
+# Weights & Biases
+wandb/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+output_log*.txt
+
+# Offload folders
+offload/
