@@ -43,7 +43,7 @@ The pipeline performs **N** iterative cycles:
 2. **Text → Structure** — LLM₂ reconstructs triples from the generated text
 3. **Fidelity Evaluation** — Round-trip similarity combines embedding cosine distance and lexical overlap:
 
-$$\operatorname{sim}(S, \hat{S}, \alpha) = \alpha \cdot \cos(\phi(S), \phi(\hat{S})) + (1 - \alpha) \cdot \operatorname{sim}_{\text{lex}}(S, \hat{S})$$
+$$\text{sim}(S, \hat{S}, \alpha) = \alpha \cdot \cos(\phi(S), \phi(\hat{S})) + (1 - \alpha) \cdot \text{sim}_{\text{lex}}(S, \hat{S})$$
 
 4. **Adaptive Sampling** — Temperature and top-*p* are dynamically adjusted based on the fidelity score
 5. **Selection** — Only outputs exceeding a strict threshold are retained
