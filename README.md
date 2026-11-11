@@ -6,10 +6,10 @@
 <h3 align="center">Semantic Fidelity in Automated Industrial Knowledge Graphs</h3>
 
 <p align="center">
-  <a href="https://2026.aclweb.org/"><img src="https://img.shields.io/badge/ACL%202026-Industry%20Track-blue?style=for-the-badge" alt="ACL 2026"/></a>
+  <a href="https://aclanthology.org/2026.acl-industry.140/"><img src="https://img.shields.io/badge/ACL%202026-Industry%20Track-blue?style=for-the-badge" alt="ACL 2026"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"/></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-yellow?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
-  <a href="https://huggingface.co/"><img src="https://img.shields.io/badge/🤗-Models%20%26%20Data-orange?style=for-the-badge" alt="HuggingFace"/></a>
+  <a href="https://huggingface.co/collections/Kamyar-zeinalipour/from-graph-to-text-and-back-acl-2026-6af4841166cf330a92294b6c"><img src="https://img.shields.io/badge/🤗-Models%20%26%20Data-orange?style=for-the-badge" alt="HuggingFace"/></a>
 </p>
 
 <p align="center">
@@ -116,7 +116,7 @@ round-trip-kg/
 ### 1. Installation
 
 ```bash
-git clone https://github.com/Kamyar-zeinalipour/round-trip-kg.git
+git clone https://github.com/KamyarZeinalipour/round-trip-kg.git
 cd round-trip-kg
 pip install -r requirements.txt
 ```
@@ -180,13 +180,24 @@ python evaluation/evaluate.py --input_dir inference_results/parsed
 
 ## 🤗 Models & Datasets
 
-Training datasets are available on HuggingFace Hub:
+Everything from the paper is in the
+[**From Graph to Text and Back** collection](https://huggingface.co/collections/Kamyar-zeinalipour/from-graph-to-text-and-back-acl-2026-6af4841166cf330a92294b6c).
 
-| Dataset | Link |
-|:--------|:-----|
-| LLaMA-2-7B synthetic data | [`Kamyar-zeinalipour/llama2_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama2_kg) |
-| LLaMA-3.2-1B synthetic data | [`Kamyar-zeinalipour/llama1b_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama1b_kg) |
-| LLaMA-3.2-3B synthetic data | [`Kamyar-zeinalipour/llama3b_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama3b_kg) |
+**Fine-tuned models** (LoRA adapters trained on each model's own round-trip filtered data):
+
+| Base model | Adapter | Training data | Human rating (base → fine-tuned) |
+|---|---|---|---|
+| [Llama-3.2-1B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct) | [RoundTripKG-Llama-3.2-1B-Instruct-LoRA](https://huggingface.co/Kamyar-zeinalipour/RoundTripKG-Llama-3.2-1B-Instruct-LoRA) | [llama1b_kg](https://huggingface.co/datasets/Kamyar-zeinalipour/llama1b_kg) | 1.94 → **2.70** |
+| [Llama-3.2-3B-Instruct](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct) | [RoundTripKG-Llama-3.2-3B-Instruct-LoRA](https://huggingface.co/Kamyar-zeinalipour/RoundTripKG-Llama-3.2-3B-Instruct-LoRA) | [llama3b_kg](https://huggingface.co/datasets/Kamyar-zeinalipour/llama3b_kg) | 2.30 → **4.02** |
+| [Llama-2-7b-chat-hf](https://huggingface.co/NousResearch/Llama-2-7b-chat-hf) | [RoundTripKG-Llama-2-7b-chat-hf-LoRA](https://huggingface.co/Kamyar-zeinalipour/RoundTripKG-Llama-2-7b-chat-hf-LoRA) | [llama2_kg](https://huggingface.co/datasets/Kamyar-zeinalipour/llama2_kg) | 2.70 → **3.32** |
+
+**Training datasets** (self-generated, round-trip filtered; 1,950 train / 50 test each):
+[`llama2_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama2_kg) ·
+[`llama1b_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama1b_kg) ·
+[`llama3b_kg`](https://huggingface.co/datasets/Kamyar-zeinalipour/llama3b_kg)
+
+Automatic metrics for every model and setting are in
+[`paper_results/automatic_metrics.csv`](paper_results/automatic_metrics.csv).
 
 ---
 
