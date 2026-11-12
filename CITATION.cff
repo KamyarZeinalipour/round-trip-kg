@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the paper below."
+title: "From Graph to Text and Back: Semantic Fidelity in Automated Industrial Knowledge Graphs"
+repository-code: "https://github.com/KamyarZeinalipour/round-trip-kg"
+license: MIT
+authors:
+  - family-names: "Zeinalipour"
+    given-names: "Kamyar"
+  - family-names: "Severini"
+    given-names: "Silvia"
+  - family-names: "Borghini"
+    given-names: "Alessia"
+  - family-names: "Cardarelli"
+    given-names: "Sara"
+  - family-names: "Maggini"
+    given-names: "Marco"
+  - family-names: "Gori"
+    given-names: "Marco"
+preferred-citation:
+  type: conference-paper
+  title: "From Graph to Text and Back: Semantic Fidelity in Automated Industrial Knowledge Graphs"
+  authors:
+    - family-names: "Zeinalipour"
+      given-names: "Kamyar"
+    - family-names: "Severini"
+      given-names: "Silvia"
+    - family-names: "Borghini"
+      given-names: "Alessia"
+    - family-names: "Cardarelli"
+      given-names: "Sara"
+    - family-names: "Maggini"
+      given-names: "Marco"
+    - family-names: "Gori"
+      given-names: "Marco"
+  collection-title: "Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 6: Industry Track), ACL 2026, San Diego, California, USA"
+  conference:
+    name: "ACL 2026"
+    city: "San Diego"
+    country: US
+  month: 7
+  year: 2026
+  start: 2095
+  end: 2111
+  doi: "10.18653/v1/2026.acl-industry.140"
+  url: "https://aclanthology.org/2026.acl-industry.140/"
